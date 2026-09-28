@@ -11,7 +11,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: jdx/mise-action@v2
       - run: mise run setup
       - run: mise run schema:verify
@@ -27,7 +27,7 @@ jobs:
       - run: mise run conformance
       - run: mise run conformance:cel
       - run: mise run conformance:check
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: conformance-all
@@ -45,7 +45,7 @@ jobs:
             printf 'system=%s\n' "$(uname -a)"
           } > _build/benchmark/environment.txt
       - run: MIX_ENV=test mix protovalidate.benchmark --output _build/benchmark/result.csv
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: benchmark
@@ -60,7 +60,7 @@ jobs:
     name: Elixir 1.19.0 / OTP 28.0
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: '1.19.0'
