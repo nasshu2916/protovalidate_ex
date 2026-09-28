@@ -102,7 +102,8 @@ defmodule Protovalidate.CEL.CelixirTypes do
   defp scalar_type(:TYPE_BOOL), do: :bool
 
   defp scalar_type(type)
-       when type in [:TYPE_UINT32, :TYPE_UINT64, :TYPE_FIXED32, :TYPE_FIXED64], do: :uint
+       when type in [:TYPE_UINT32, :TYPE_UINT64, :TYPE_FIXED32, :TYPE_FIXED64],
+       do: :uint
 
   defp scalar_type(_), do: :int
 
