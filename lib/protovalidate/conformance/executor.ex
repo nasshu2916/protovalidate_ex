@@ -19,14 +19,19 @@ defmodule Protovalidate.Conformance.Executor do
 
   @spec run(keyword()) :: :ok
   def run(options \\ []) do
-    # protobuf wire data は文字コード変換せず、標準入出力でバイト列として扱う。
+    # protobuf wire の応答を文字コード変換せず標準出力へ書き出す。
     :ok = :io.setopts(:standard_io, binary: true, encoding: :latin1)
     request = read_stdin() |> TestConformanceRequest.decode()
     response = execute(request, options)
     IO.binwrite(:stdio, TestConformanceResponse.encode(response))
   end
 
-  defp read_stdin, do: read_stdin([])
+  defp read_stdin do
+    case System.get_env("PROTOVALIDATE_CONFORMANCE_STDIN_FILE") do
+      nil -> read_stdin([])
+      path -> File.read!(path)
+    end
+  end
 
   defp read_stdin(chunks) do
     case IO.binread(:stdio, 65_536) do
