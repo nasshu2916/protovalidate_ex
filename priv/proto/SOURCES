@@ -1,0 +1,4 @@
+Protovalidate version: 1.2.2
+Protovalidate archive: https://github.com/bufbuild/protovalidate/releases/download/v1.2.2/protovalidate-1.2.2.tar.gz
+Protovalidate archive SHA-256: 94a5df7b3f33fe8153c2b8f753bfcbe2968773553cccea800d3228e0d938e9b2
+protoc version: libprotoc 33.1

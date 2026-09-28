@@ -1,0 +1,85 @@
+syntax = "proto2";
+
+package buf.validate;
+
+import "google/protobuf/descriptor.proto";
+
+message Rule {
+  optional string id = 1;
+  optional string message = 2;
+  optional string expression = 3;
+}
+
+message StringRules {
+  optional string const = 1;
+  optional uint64 len = 19;
+  optional uint64 min_len = 2;
+  optional uint64 max_len = 3;
+  optional uint64 len_bytes = 20;
+  optional uint64 min_bytes = 4;
+  optional uint64 max_bytes = 5;
+  optional string pattern = 6;
+  optional string prefix = 7;
+  optional string suffix = 8;
+  optional string contains = 9;
+  optional string not_contains = 23;
+  repeated string in = 10;
+  repeated string not_in = 11;
+  optional bool uuid = 22;
+  optional bool email = 12;
+}
+
+message UInt32Rules {
+  optional uint32 const = 1;
+  optional uint32 lt = 2;
+  optional uint32 lte = 3;
+  optional uint32 gt = 4;
+  optional uint32 gte = 5;
+  repeated uint32 in = 6;
+  repeated uint32 not_in = 7;
+}
+
+message BoolRules {
+  optional bool const = 1;
+}
+
+message EnumRules {
+  optional int32 const = 1;
+  optional bool defined_only = 2;
+  repeated int32 in = 3;
+  repeated int32 not_in = 4;
+}
+
+message TimestampRules {
+  optional bool gt_now = 8;
+}
+
+message FieldRules {
+  oneof type {
+    UInt32Rules uint32 = 5;
+    BoolRules bool = 13;
+    StringRules string = 14;
+    EnumRules enum = 16;
+    TimestampRules timestamp = 22;
+  }
+}
+
+message MessageRules {
+  repeated Rule cel = 3;
+}
+
+message OneofRules {
+  optional bool required = 1;
+}
+
+extend google.protobuf.FieldOptions {
+  optional FieldRules field = 1159;
+}
+
+extend google.protobuf.MessageOptions {
+  optional MessageRules message = 1159;
+}
+
+extend google.protobuf.OneofOptions {
+  optional OneofRules oneof = 1159;
+}

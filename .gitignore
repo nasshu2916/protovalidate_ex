@@ -1,0 +1,10 @@
+/_build/
+/cover/
+/deps/
+/doc/
+/.elixir_ls/
+/.lexical/
+erl_crash.dump
+
+__pycache__/
+*.tar

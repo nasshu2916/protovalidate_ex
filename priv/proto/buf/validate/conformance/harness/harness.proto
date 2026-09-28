@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package buf.validate.conformance.harness;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/descriptor.proto";
+
+message TestConformanceRequest {
+  google.protobuf.FileDescriptorSet fdset = 2;
+  map<string, google.protobuf.Any> cases = 3;
+}
+
+message TestConformanceResponse {
+  map<string, TestResult> results = 1;
+}
+
+message TestResult {
+  oneof result {
+    bool success = 1;
+    buf.validate.Violations validation_error = 2;
+    string compilation_error = 3;
+    string runtime_error = 4;
+    string unexpected_error = 5;
+  }
+}

@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package acme.descriptor.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+message Probe {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_ACTIVE = 1;
+  }
+
+  string implicit_string = 1 [
+    (buf.validate.field).string.min_len = 2,
+    (buf.validate.field).string.prefix = "a"
+  ];
+  optional string optional_string = 2 [(buf.validate.field).string.min_len = 2];
+  repeated string labels = 3;
+  map<string, uint32> scores = 4;
+  google.protobuf.Any payload = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Duration timeout = 7;
+  google.protobuf.FieldMask update_mask = 8;
+  Status status = 11;
+  Child child = 12;
+  repeated Child children = 13;
+  map<string, Child> children_by_name = 14;
+
+  oneof contact {
+    option (buf.validate.oneof).required = true;
+    string email = 9;
+    string phone = 10;
+  }
+}
+
+message Child {
+  string code = 1 [(buf.validate.field).string.min_len = 2];
+  Grandchild grandchild = 2;
+}
+
+message Grandchild {
+  string code = 1 [(buf.validate.field).string.min_len = 2];
+}
+
+message RecursiveNode {
+  string code = 1 [(buf.validate.field).string.min_len = 2];
+  RecursiveNode child = 2;
+  repeated RecursiveNode children = 3;
+  map<int32, RecursiveNode> signed_children = 4;
+  map<uint32, RecursiveNode> unsigned_children = 5;
+  google.protobuf.Timestamp timestamp = 6 [(buf.validate.field).timestamp.gt_now = true];
+}
+
+message CELNode {
+  option (buf.validate.message).cel = {
+    id: "node"
+    expression: "track"
+  };
+  CELNode child = 1;
+  repeated CELNode children = 2;
+  map<string, CELNode> children_by_name = 3;
+}

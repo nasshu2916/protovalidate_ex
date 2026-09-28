@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+package acme.descriptor.v1;
+
+message Legacy {
+  required string id = 1;
+  optional string nickname = 2;
+}

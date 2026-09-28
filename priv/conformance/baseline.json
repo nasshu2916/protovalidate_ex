@@ -1,0 +1,12 @@
+{
+  "version": "1.2.2",
+  "command": "mise run conformance:all",
+  "counts": {
+    "failed": 0,
+    "skipped": 0,
+    "passed": 2872,
+    "total": 2872
+  },
+  "reasons": {},
+  "failures": {}
+}

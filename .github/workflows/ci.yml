@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: mise run setup
+      - run: mise run schema:verify
+      - run: mise run format
+      - run: mise run credo
+      - run: mise run dialyzer
+      - run: mise run test
+      - run: python3 -m unittest discover -s test -p '*_test.py'
+      - run: mix escript.install hex protobuf 0.17.0 --force
+      - run: mise run package:smoke
+      - run: mise run docs
+      - run: mise run deps:audit
+      - run: mise run conformance
+      - run: mise run conformance:cel
+      - run: mise run conformance:check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conformance-all
+          path: _build/conformance/all.log
+      - name: Record benchmark environment
+        run: |
+          mkdir -p _build/benchmark
+          {
+            printf 'commit=%s\n' "$GITHUB_SHA"
+            printf 'runner_os=%s\n' "$RUNNER_OS"
+            printf 'runner_arch=%s\n' "$RUNNER_ARCH"
+            printf 'runner_name=%s\n' "$RUNNER_NAME"
+            printf 'elixir=%s\n' "$(elixir -e 'IO.write(System.version())')"
+            printf 'otp=%s\n' "$(elixir -e 'IO.write(:erlang.system_info(:otp_release))')"
+            printf 'system=%s\n' "$(uname -a)"
+          } > _build/benchmark/environment.txt
+      - run: MIX_ENV=test mix protovalidate.benchmark --output _build/benchmark/result.csv
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark
+          path: _build/benchmark
+          if-no-files-found: warn
+      - uses: anchore/sbom-action@v0
+        with:
+          path: .
+          artifact-name: protovalidate-sbom.spdx.json
+
+  minimum-version:
+    name: Elixir 1.19.0 / OTP 28.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.19.0'
+          otp-version: '28.0'
+          version-type: strict
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: '33.1'
+      - name: Verify minimum BEAM versions
+        run: |
+          test "$(elixir -e 'IO.write(System.version())')" = '1.19.0'
+          test "$(elixir -e 'IO.write(:erlang.system_info(:otp_release))')" = '28'
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+      - run: mix test

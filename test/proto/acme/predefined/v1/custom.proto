@@ -1,0 +1,14 @@
+syntax = "proto2";
+package acme.predefined.v1;
+import "buf/validate/validate.proto";
+
+extend buf.validate.Int64Rules {
+  optional bool even = 1001 [(buf.validate.predefined).cel = {
+    id: "int64.even"
+    expression: "!rule || this % 2 == 0"
+    message: "must be even"
+  }];
+}
+message Input {
+  optional int64 value = 1 [(buf.validate.field).int64.(even) = true];
+}

@@ -1,0 +1,35 @@
+name: Check buf.validate update
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: current
+        run: |
+          . scripts/proto_sources.env
+          echo "version=${PROTOVALIDATE_VERSION}" >> "$GITHUB_OUTPUT"
+      - id: upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "version=$(gh api repos/bufbuild/protovalidate/releases/latest --jq .tag_name | sed 's/^v//')" >> "$GITHUB_OUTPUT"
+      - if: steps.current.outputs.version != steps.upstream.outputs.version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_VERSION: ${{ steps.current.outputs.version }}
+          UPSTREAM_VERSION: ${{ steps.upstream.outputs.version }}
+        run: |
+          title="Update buf.validate to ${UPSTREAM_VERSION}"
+          if ! gh issue list --state open --search "$title in:title" --json title --jq '.[].title' | grep -Fxq "$title"; then
+            body=$(printf 'Current pinned version: %s\nDetected upstream version: %s\n' "$CURRENT_VERSION" "$UPSTREAM_VERSION")
+            gh issue create --title "$title" --body "$body"
+          fi

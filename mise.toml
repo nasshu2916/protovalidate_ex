@@ -1,0 +1,123 @@
+[tools]
+elixir = "1.20.3-otp-29"
+erlang = "29.0.5"
+protoc = "33.1"
+
+[tasks.setup]
+description = "依存関係を取得して開発環境を準備する"
+run = "mix deps.get"
+
+[tasks.format]
+description = "コードの整形状態を検証する"
+run = "mix format --check-formatted"
+
+[tasks.test]
+description = "テストスイートを実行する"
+run = "mix test"
+
+[tasks.dialyzer]
+description = "Dialyzer による型静的解析を実行する"
+run = "mix dialyzer"
+
+[tasks.credo]
+description = "Credo によるコード品質チェックを実行する"
+run = "mix credo"
+
+[tasks.docs]
+description = "ExDoc を警告なしで生成する"
+run = "mix docs"
+
+[tasks."deps:audit"]
+description = "依存関係の既知の脆弱性を確認する"
+run = "mix hex.audit"
+
+[tasks.benchmark]
+description = "正規化・コンパイル・cold/warm API・再帰・collection の時間とメモリを測定する"
+run = "MIX_ENV=test mix protovalidate.benchmark"
+
+[tasks.check]
+description = "スキーマ・整形・静的解析・テスト・文書・依存監査を実行する"
+run = '''
+mise run schema:verify
+mise run format
+mise run credo
+mise run dialyzer
+mise run test
+mise run docs
+mise run deps:audit
+'''
+
+[tasks."test:proto"]
+description = "Proto fixture の descriptor と注釈を検証する"
+run = "mix test test/protovalidate/proto_validation_generation_test.exs"
+
+[tasks.conformance]
+description = "固定した公式 Protovalidate conformance の bool・enum・map・repeated 回帰ケースを実行する"
+run = "./scripts/run_conformance.sh --suite '^standard_rules/(bool|enum|map|repeated)$' --case '^(none/valid|const/true/valid|const/false/valid|const/true/invalid|const/false/invalid|const/valid|const/invalid|min_pairs/valid|min_pairs/invalid)$'"
+
+[tasks."conformance:all"]
+description = "公式 Protovalidate conformance を任意の suite / case フィルターで実行する"
+run = "./scripts/run_conformance.sh"
+
+[tasks."conformance:pattern"]
+description = "固定版の公式 string / bytes pattern fixture を実行する"
+run = "./scripts/run_conformance.sh --suite '^standard_rules/(string|bytes)$' --case '^pattern/'"
+
+[tasks."schema:sync"]
+description = "固定した公式 Protovalidate スキーマと Google WKT を取得する"
+run = "./scripts/sync_proto_sources.sh"
+
+[tasks."schema:verify"]
+description = "取得済み公式スキーマと Google WKT のハッシュを検証する"
+run = "./scripts/verify_proto_sources.sh"
+
+[tasks."test:generate-proto"]
+description = "test/proto の fixture から Elixir コードを生成する"
+run = '''
+fixture_root="test/proto"
+protoc_path="$(mise which protoc)"
+protobuf_include="$(dirname "$protoc_path")/../include"
+output_dir="test/generated"
+plugin_path="$(mise where elixir)/.mix/escripts/protoc-gen-elixir"
+
+if [ ! -x "$plugin_path" ]; then
+  printf 'protoc-gen-elixir is not installed: %s\n' "$plugin_path" >&2
+  exit 1
+fi
+
+mkdir -p "$output_dir"
+
+protoc \
+  --plugin="protoc-gen-elixir=$plugin_path" \
+  --proto_path "$fixture_root" \
+  --proto_path "$protobuf_include" \
+  --elixir_out "$output_dir" \
+  --elixir_opt gen_descriptors=true \
+  "$fixture_root/buf/validate/validate.proto" \
+  "$fixture_root/acme/user/v1/user.proto" \
+  "$fixture_root/acme/descriptor/v1/fixture.proto" \
+  "$fixture_root/acme/descriptor/v1/legacy.proto"
+
+printf 'Generated Elixir files in %s\n' "$output_dir"
+'''
+
+[tasks."conformance:check"]
+description = "全件を実行し、理由付き基準からの新規失敗を検出する"
+run = "sh scripts/check_conformance.sh"
+
+[tasks."package:smoke"]
+description = "Hex パッケージを展開し、別プロジェクトの公式 descriptor 付き生成コードで検証する"
+run = "sh scripts/package_smoke.sh"
+
+[tasks."conformance:cel"]
+description = "Celixir 実行器で公式 custom_rules 全件を検証する"
+run = "PROTOVALIDATE_CEL=celixir ./scripts/run_conformance.sh --suite '^custom_rules$'"
+
+[tasks."test:generate-predefined"]
+description = "公式スキーマを使う predefined fixture を再生成する"
+run = '''
+protoc --plugin="protoc-gen-elixir=$(mise where elixir)/.mix/escripts/protoc-gen-elixir" \
+  --proto_path priv/proto --proto_path test/proto \
+  --elixir_out test/generated/acme/predefined --elixir_opt gen_descriptors=true \
+  test/proto/acme/predefined/v1/custom.proto
+'''
