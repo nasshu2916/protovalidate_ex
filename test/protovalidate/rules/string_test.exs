@@ -66,6 +66,13 @@ defmodule Protovalidate.Rules.StringTest do
     assert violation.rule_id == "string.host_and_port"
   end
 
+  test "URI と URI reference は5桁を超える RFC port を受け入れる" do
+    assert Format.uri?("https://example.com:0123456789/path")
+    assert Format.uri?("https://[::1%25eth0]:0123456789/path")
+    assert Format.uri_ref?("//user:info@example.com:0123456789/path")
+    refute Format.uri_ref?("//example.com:0123456x/path")
+  end
+
   test "形式判定の境界を固定する" do
     assert Format.email?("a@example.com")
     refute Format.email?("")

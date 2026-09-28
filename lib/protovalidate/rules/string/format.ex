@@ -5,6 +5,8 @@ defmodule Protovalidate.Rules.String.Format do
 
   @prefix_length_regex ~r/\A(?:0|[1-9][0-9]*)\z/
   @port_regex ~r/\A(?:0|[1-9][0-9]*)\z/
+  @long_uri_port_regex ~r/\A:[0-9]{6,}\z/
+  @uri_authority_regex ~r/\A((?:[A-Za-z][A-Za-z0-9+.-]*:)?\/\/)([^\/?#]*)(.*)\z/s
 
   def uuid?(value) when is_binary(value),
     do: Regex.match?(~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, value)
@@ -124,7 +126,7 @@ defmodule Protovalidate.Rules.String.Format do
   def uri?(_value), do: false
 
   def uri_ref?(value) when is_binary(value),
-    do: valid_uri_characters?(value) and match?({:ok, _uri}, URI.new(value))
+    do: valid_uri_characters?(value) and match?({:ok, _uri}, new_uri(value))
 
   def uri_ref?(_value), do: false
 
@@ -182,7 +184,7 @@ defmodule Protovalidate.Rules.String.Format do
   end
 
   defp valid_standard_uri?(value) do
-    case URI.new(value) do
+    case new_uri(value) do
       {:ok, %URI{scheme: scheme, host: host}} when is_binary(scheme) and scheme != "" ->
         valid_uri_reg_name?(host)
 
@@ -199,11 +201,65 @@ defmodule Protovalidate.Rules.String.Format do
          {:ok, userinfo, host, port_suffix} <- split_uri_ip_literal_authority(authority),
          true <- valid_uri_ip_literal?(host),
          sanitized <- prefix <> userinfo <> "[::1]" <> port_suffix <> suffix,
-         {:ok, %URI{scheme: scheme}} <- URI.new(sanitized),
+         {:ok, %URI{scheme: scheme}} <- new_uri(sanitized),
          true <- is_binary(scheme) and scheme != "" do
       true
     else
       _other -> false
+    end
+  end
+
+  # RFC 3986 の port は桁数無制限。
+  # OTP 29.0.6 の URI parser は整数変換を5桁に制限するため、
+  # 構文検証時だけ長い port を短い数字に置き換える。
+  defp new_uri(value), do: value |> normalize_long_uri_port() |> URI.new()
+
+  defp normalize_long_uri_port(value) do
+    case Regex.run(@uri_authority_regex, value) do
+      [_, prefix, authority, suffix] ->
+        prefix <> normalize_uri_authority_port(authority) <> suffix
+
+      _other ->
+        value
+    end
+  end
+
+  defp normalize_uri_authority_port(authority) do
+    case String.split(authority, "@") do
+      [host_port] ->
+        normalize_uri_host_port(host_port)
+
+      [userinfo, host_port] ->
+        userinfo <> "@" <> normalize_uri_host_port(host_port)
+
+      _other ->
+        authority
+    end
+  end
+
+  defp normalize_uri_host_port(<<"[", rest::binary>> = host_port) do
+    case :binary.match(rest, "]") do
+      {offset, 1} ->
+        suffix = binary_part(rest, offset + 1, byte_size(rest) - offset - 1)
+
+        if Regex.match?(@long_uri_port_regex, suffix),
+          do: binary_part(host_port, 0, offset + 2) <> ":0",
+          else: host_port
+
+      :nomatch ->
+        host_port
+    end
+  end
+
+  defp normalize_uri_host_port(host_port) do
+    case String.split(host_port, ":", parts: 2) do
+      [host, port] ->
+        if Regex.match?(@long_uri_port_regex, ":" <> port),
+          do: host <> ":0",
+          else: host_port
+
+      _other ->
+        host_port
     end
   end
 

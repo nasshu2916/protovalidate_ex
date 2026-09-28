@@ -19,7 +19,8 @@ defmodule Protovalidate.Conformance.Executor do
 
   @spec run(keyword()) :: :ok
   def run(options \\ []) do
-    :ok = :io.setopts(:standard_io, encoding: :latin1)
+    # protobuf wire data は文字コード変換せず、標準入出力でバイト列として扱う。
+    :ok = :io.setopts(:standard_io, binary: true, encoding: :latin1)
     request = read_stdin() |> TestConformanceRequest.decode()
     response = execute(request, options)
     IO.binwrite(:stdio, TestConformanceResponse.encode(response))
