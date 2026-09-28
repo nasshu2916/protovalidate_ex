@@ -5,7 +5,7 @@ defmodule Protovalidate.MixProject do
     [
       app: :protovalidate,
       version: "0.1.0",
-      elixir: "~> 1.19",
+      elixir: "~> 1.16",
       description: "Descriptor-driven Protocol Buffers validation with Buf Protovalidate rules",
       package: [
         files: [
